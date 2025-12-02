@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Симулятор вождения - Учимся управлять автомобилем</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #gameContainer {
+            display: flex;
+            height: 100vh;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        #leftPanel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #gameCanvas {
+            background: #2d3436;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            flex: 1;
+        }
+
+        #rightPanel {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        #steeringView {
+            height: 250px;
+            background: linear-gradient(180deg, #34495e 0%, #2c3e50 100%);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #steeringWheel {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease-out;
+        }
+
+        .wheel-outer {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2c3e50, #34495e);
+            border: 8px solid #1a252f;
+            position: relative;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.1);
+        }
+
+        .wheel-inner {
+            position: absolute;
+            width: 60%;
+            height: 60%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: linear-gradient(145deg, #34495e, #2c3e50);
+            border: 3px solid #1a252f;
+        }
+
+        .wheel-spoke {
+            position: absolute;
+            width: 6px;
+            height: 45%;
+            background: linear-gradient(180deg, #e74c3c, #c0392b);
+            left: 50%;
+            top: 5%;
+            transform: translateX(-50%);
+            border-radius: 3px;
+        }
+
+        .wheel-logo {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #e74c3c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .steering-indicator {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ecf0f1;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .wheels-display {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 60px;
+        }
+
+        .wheel-icon {
+            width: 30px;
+            height: 50px;
+            background: #2c3e50;
+            border: 2px solid #ecf0f1;
+            border-radius: 5px;
+            position: relative;
+            transition: transform 0.1s ease-out;
+        }
+
+        .wheel-icon::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 3px;
+            background: #e74c3c;
+            left: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        #controls {
+            flex: 1;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .gear-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .gear-btn {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #3498db;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .gear-btn:hover {
+            background: #ecf0f1;
+        }
+
+        .gear-btn.active {
+            background: #3498db;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .pedals {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .pedal {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+            transition: all 0.1s;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .pedal.gas {
+            background: linear-gradient(180deg, #27ae60, #229954);
+        }
+
+        .pedal.brake {
+            background: linear-gradient(180deg, #e74c3c, #c0392b);
+        }
+
+        .pedal:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+        }
+
+        #info {
+            flex: 1;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .info-value {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 25px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 2px solid #2c3e50;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+            transition: width 0.3s, background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .health-fill.low {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .health-fill.medium {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        #instructions {
+            font-size: 12px;
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 6px;
+            background: #34495e;
+            color: white;
+            border-radius: 3px;
+            font-weight: bold;
+            margin: 0 2px;
+        }
+
+        .victory-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .victory-message.show {
+            display: block;
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .victory-message h2 {
+            color: #27ae60;
+            margin-bottom: 15px;
+            font-size: 32px;
+        }
+
+        .victory-message button {
+            padding: 12px 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .victory-message button:hover {
+            background: #2980b9;
+        }
+
+        .level-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #2c3e50;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="leftPanel">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        
+        <div id="rightPanel">
+            <div class="panel" id="steeringView">
+                <div class="steering-indicator">Угол: <span id="angleDisplay">0°</span></div>
+                <div id="steeringWheel">
+                    <div class="wheel-outer">
+                        <div class="wheel-spoke"></div>
+                        <div class="wheel-inner"></div>
+                        <div class="wheel-logo">T</div>
+                    </div>
+                </div>
+                <div class="wheels-display">
+                    <div class="wheel-icon" id="leftWheel"></div>
+                    <div class="wheel-icon" id="rightWheel"></div>
+                </div>
+            </div>
+
+            <div class="panel" id="controls">
+                <div class="control-group">
+                    <span class="control-label">Передача:</span>
+                    <div class="gear-selector">
+                        <button class="gear-btn" data-gear="R">R</button>
+                        <button class="gear-btn" data-gear="N">N</button>
+                        <button class="gear-btn active" data-gear="D">D</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Педали:</span>
+                    <div class="pedals">
+                        <button class="pedal gas">ГАЗ<br>(^)</button>
+                        <button class="pedal brake">ТОРМОЗ<br>(v)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="info">
+                <div class="info-row">
+                    <span class="info-label">Уровень:</span>
+                    <span class="info-value" id="levelDisplay">1</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Очки:</span>
+                    <span class="info-value" id="scoreDisplay">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Звёзды:</span>
+                    <span class="info-value"><span id="starsCollected">0</span>/<span id="starsTotal">0</span></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Скорость:</span>
+                    <span class="info-value" id="speedDisplay">0 км/ч</span>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Состояние:</span>
+                    <div class="health-bar">
+                        <div class="health-fill" id="healthFill">100%</div>
+                    </div>
+                </div>
+                <div id="instructions">
+                    <strong>Управление:</strong><br>
+                    <span class="key">A</span>/<span class="key">D</span> или <span class="key"><</span>/<span class="key">></span> - руль<br>
+                    <span class="key">W</span> или <span class="key">^</span> - газ<br>
+                    <span class="key">S</span> или <span class="key">v</span> - тормоз<br>
+                    <span class="key">R</span>, <span class="key">N</span>, <span class="key">D</span> - передачи<br>
+                    <strong>Цель:</strong> Собери все звёзды!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="victory-message" id="victoryMessage">
+        <h2>** Уровень пройден! **</h2>
+        <p>Отличная работа!</p>
+        <p>Очки: <span id="victoryScore">0</span></p>
+        <button onclick="nextLevel()">Следующий уровень</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Адаптивный размер canvas
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Игровые переменные
+        const game = {
+            level: 1,
+            score: 0,
+            health: 100,
+            stars: [],
+            obstacles: [],
+            parkingSpots: [],
+            roads: []
+        };
+
+        // Автомобиль
+        const car = {
+            x: 100,
+            y: 100,
+            width: 40,
+            height: 70,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 2,
+            acceleration: 0.03,
+            friction: 0.03,
+            turnSpeed: 0.01,
+            steeringAngle: 0,
+            maxSteeringAngle: 540, // 1.5 оборота = 540 градусов
+            gear: 'D', // R, N, D
+            color: '#FFFF92' // Жёлтый цвет Toyota
+        };
+
+        // Управление
+        const keys = {};
+        const mouse = {
+            x: 0,
+            y: 0,
+            down: false
+        };
+
+        // События клавиатуры
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            
+            // Переключение передач
+            if (e.key.toLowerCase() === 'r') changeGear('R');
+            if (e.key.toLowerCase() === 'n') changeGear('N');
+            if (e.key.toLowerCase() === 'd') changeGear('D');
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // События мыши для педалей
+        document.querySelector('.pedal.gas').addEventListener('mousedown', () => keys['w'] = true);
+        document.querySelector('.pedal.gas').addEventListener('mouseup', () => keys['w'] = false);
+        document.querySelector('.pedal.gas').addEventListener('mouseleave', () => keys['w'] = false);
+        
+        document.querySelector('.pedal.brake').addEventListener('mousedown', () => keys['s'] = true);
+        document.querySelector('.pedal.brake').addEventListener('mouseup', () => keys['s'] = false);
+        document.querySelector('.pedal.brake').addEventListener('mouseleave', () => keys['s'] = false);
+
+        // Кнопки передач
+        document.querySelectorAll('.gear-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                changeGear(btn.dataset.gear);
+            });
+        });
+
+        function changeGear(gear) {
+            car.gear = gear;
+            document.querySelectorAll('.gear-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.gear === gear) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Генерация уровня
+        function generateLevel() {
+            game.stars = [];
+            game.obstacles = [];
+            game.parkingSpots = [];
+            game.roads = [];
+
+            const numStars = 3 + game.level;
+            const numObstacles = 5 + game.level * 2;
+
+            // Генерация дороги
+            generateRoad();
+
+            // Генерация звёзд
+            for (let i = 0; i < numStars; i++) {
+                let pos = getRandomRoadPosition();
+                game.stars.push({
+                    x: pos.x,
+                    y: pos.y,
+                    radius: 15,
+                    collected: false
+                });
+            }
+
+            // Генерация препятствий (конусы)
+            for (let i = 0; i < numObstacles; i++) {
+                let pos = getRandomRoadPosition();
+                game.obstacles.push({
+                    x: pos.x,
+                    y: pos.y,
+                    width: 20,
+                    height: 20,
+                    type: 'cone'
+                });
+            }
+
+            // Генерация парковочных мест
+            if (game.level >= 2) {
+                generateParkingSpots();
+            }
+
+            // Сброс позиции машины
+            car.x = 100;
+            car.y = 100;
+            car.angle = 3.13;
+            car.speed = 0;
+            car.steeringAngle = 0;
+
+            updateUI();
+        }
+
+        function generateRoad() {
+            const segments = 6 + game.level;
+            let x = 50;
+            let y = 50;
+            
+            for (let i = 0; i < segments; i++) {
+                const width = 150 + Math.random() * 100;
+                const height = 150 + Math.random() * 100;
+                
+                game.roads.push({
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height
+                });
+
+                // Следующий сегмент
+                if (Math.random() > 0.5) {
+                    x += width - 50;
+                } else {
+                    y += height - 50;
+                }
+            }
+        }
+
+        function getRandomRoadPosition() {
+            if (game.roads.length === 0) {
+                return {
+                    x: Math.random() * (canvas.width - 100) + 50,
+                    y: Math.random() * (canvas.height - 100) + 50
+                };
+            }
+
+            const road = game.roads[Math.floor(Math.random() * game.roads.length)];
+            return {
+                x: road.x + Math.random() * road.width,
+                y: road.y + Math.random() * road.height
+            };
+        }
+
+        function generateParkingSpots() {
+            const numSpots = Math.min(2, Math.floor(game.level / 2));
+            
+            for (let i = 0; i < numSpots; i++) {
+                let pos = getRandomRoadPosition();
+                game.parkingSpots.push({
+                    x: pos.x,
+                    y: pos.y,
+                    width: 60,
+                    height: 100,
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Обновление игры
+        function update() {
+            // Управление рулём
+            if (keys['a'] || keys['arrowleft']) {
+                car.steeringAngle = Math.max(car.steeringAngle - 15, -car.maxSteeringAngle);
+            } else if (keys['d'] || keys['arrowright']) {
+                car.steeringAngle = Math.min(car.steeringAngle + 15, car.maxSteeringAngle);
+            } else {
+                // Возврат руля в центр
+                if (car.steeringAngle > 0) {
+//                    car.steeringAngle = Math.max(0, car.steeringAngle - 10);
+                } else if (car.steeringAngle < 0) {
+//                    car.steeringAngle = Math.min(0, car.steeringAngle + 10);
+                }
+            }
+
+            // Управление газом и тормозом
+            if (car.gear === 'D') {
+                if (keys['w'] || keys['arrowup']) {
+                    car.speed = Math.min(car.speed + car.acceleration, car.maxSpeed);
+                } else if (keys['s'] || keys['arrowdown']) {
+                    car.speed = Math.max(0, car.speed - car.acceleration * 2, -car.maxSpeed * 0.5);
+                } else {
+                    // Трение
+                    if (car.speed > 0) {
+                        car.speed = Math.max(0, car.speed - car.friction);
+                    } else if (car.speed < 0) {
+                        car.speed = Math.min(0, car.speed + car.friction);
+                    }
+                }
+            } else if (car.gear === 'R') {
+                if (keys['w'] || keys['arrowup']) {
+                    car.speed = Math.max(car.speed - car.acceleration, -car.maxSpeed * 0.7);
+                } else if (keys['s'] || keys['arrowdown']) {
+                    car.speed = Math.min(car.speed + car.acceleration * 2, 0);
+                } else {
+                    if (car.speed > 0) {
+                        car.speed = Math.max(0, car.speed - car.friction);
+                    } else if (car.speed < 0) {
+                        car.speed = Math.min(0, car.speed + car.friction);
+                    }
+                }
+            } else { // N - нейтраль
+                if (car.speed > 0) {
+                    car.speed = Math.max(0, car.speed - car.friction * 0.5);
+                } else if (car.speed < 0) {
+                    car.speed = Math.min(0, car.speed + car.friction * 0.5);
+                }
+            }
+
+            // Поворот машины (только при движении)
+            if (Math.abs(car.speed) > 0.1) {
+                const turnAmount = (car.steeringAngle / car.maxSteeringAngle) * car.turnSpeed;
+                car.angle += turnAmount * car.speed;
+            }
+
+            // Движение машины
+            car.x += Math.sin(car.angle) * car.speed;
+            car.y -= Math.cos(car.angle) * car.speed;
+
+            // Границы экрана
+            car.x = Math.max(car.width / 2, Math.min(canvas.width - car.width / 2, car.x));
+            car.y = Math.max(car.height / 2, Math.min(canvas.height - car.height / 2, car.y));
+
+            // Проверка столкновений со звёздами
+            game.stars.forEach(star => {
+                if (!star.collected) {
+                    const dist = Math.hypot(car.x - star.x, car.y - star.y);
+                    if (dist < star.radius + car.width / 2) {
+                        star.collected = true;
+                        game.score += 100;
+                        checkVictory();
+                    }
+                }
+            });
+
+            // Проверка столкновений с препятствиями
+            game.obstacles.forEach(obstacle => {
+                if (checkCollision(car, obstacle)) {
+                    game.health = Math.max(0, game.health - 0.5);
+                    // Отталкивание
+                    car.speed *= -0.3;
+                }
+            });
+
+            updateUI();
+            updateSteeringWheel();
+        }
+
+        function checkCollision(car, obstacle) {
+            const carCorners = getCarCorners(car);
+            
+            for (let corner of carCorners) {
+                if (corner.x > obstacle.x - obstacle.width / 2 &&
+                    corner.x < obstacle.x + obstacle.width / 2 &&
+                    corner.y > obstacle.y - obstacle.height / 2 &&
+                    corner.y < obstacle.y + obstacle.height / 2) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getCarCorners(car) {
+            const corners = [];
+            const w = car.width / 2;
+            const h = car.height / 2;
+            
+            const cos = Math.cos(car.angle);
+            const sin = Math.sin(car.angle);
+            
+            [[-w, -h], [w, -h], [w, h], [-w, h]].forEach(([x, y]) => {
+                corners.push({
+                    x: car.x + x * cos - y * sin,
+                    y: car.y + x * sin + y * cos
+                });
+            });
+            
+            return corners;
+        }
+
+        function checkVictory() {
+            const allCollected = game.stars.every(star => star.collected);
+            if (allCollected) {
+                document.getElementById('victoryScore').textContent = game.score;
+                document.getElementById('victoryMessage').classList.add('show');
+            }
+        }
+
+        function nextLevel() {
+            document.getElementById('victoryMessage').classList.remove('show');
+            game.level++;
+            game.health = Math.min(100, game.health + 20);
+            generateLevel();
+        }
+
+        // Отрисовка
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Фон - трава
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Дороги
+            ctx.fillStyle = '#34495e';
+            game.roads.forEach(road => {
+                ctx.fillRect(road.x, road.y, road.width, road.height);
+                
+                // Разметка
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([20, 10]);
+                ctx.strokeRect(road.x + 10, road.y + 10, road.width - 20, road.height - 20);
+                ctx.setLineDash([]);
+            });
+
+            // Парковочные места
+            ctx.strokeStyle = '#ecf0f1';
+            ctx.lineWidth = 3;
+            game.parkingSpots.forEach(spot => {
+                ctx.save();
+                ctx.translate(spot.x, spot.y);
+                ctx.rotate(spot.angle);
+                ctx.strokeRect(-spot.width / 2, -spot.height / 2, spot.width, spot.height);
+                
+                // Буква P
+                ctx.fillStyle = '#ecf0f1';
+                ctx.font = 'bold 30px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('P', 0, 0);
+                ctx.restore();
+            });
+
+            // Препятствия (конусы)
+            game.obstacles.forEach(obstacle => {
+                // Конус
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.moveTo(obstacle.x, obstacle.y - obstacle.height / 2);
+                ctx.lineTo(obstacle.x - obstacle.width / 2, obstacle.y + obstacle.height / 2);
+                ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Полоски
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(obstacle.x - obstacle.width / 4, obstacle.y - 5, obstacle.width / 2, 3);
+                ctx.fillRect(obstacle.x - obstacle.width / 4, obstacle.y + 5, obstacle.width / 2, 3);
+            });
+
+            // Звёзды
+            game.stars.forEach(star => {
+                if (!star.collected) {
+                    drawStar(star.x, star.y, star.radius, '#f1c40f');
+                }
+            });
+
+            // Автомобиль
+            drawCar();
+
+            // Уровень
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(10, 10, 150, 40);
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(`Уровень ${game.level}`, 20, 35);
+        }
+
+        function drawCar() {
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+
+            // Тень
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(-car.width / 2 + 3, -car.height / 2 + 3, car.width, car.height);
+
+            // Кузов (жёлтый Toyota Pixis Echo)
+            ctx.fillStyle = car.color;
+            ctx.fillRect(-car.width / 2, -car.height / 2, car.width, car.height);
+            
+            // Контур
+            ctx.strokeStyle = '#DAA520';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-car.width / 2, -car.height / 2, car.width, car.height);
+
+            // Окна
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(-car.width / 2 + 5, -car.height / 2 + 5, car.width - 10, 15);
+            ctx.fillRect(-car.width / 2 + 5, -car.height / 2 + 25, car.width - 10, 15);
+
+            // Колёса
+            const wheelAngle = (car.steeringAngle / car.maxSteeringAngle) * 0.5;
+            
+            // Передние колёса (поворачиваются)
+            ctx.save();
+            ctx.translate(-car.width / 2 + 5, -car.height / 2 + 10);
+            ctx.rotate(wheelAngle);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(-3, -6, 6, 12);
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(car.width / 2 - 5, -car.height / 2 + 10);
+            ctx.rotate(wheelAngle);
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(-3, -6, 6, 12);
+            ctx.restore();
+
+            // Задние колёса
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(-car.width / 2 + 2, car.height / 2 - 16, 6, 12);
+            ctx.fillRect(car.width / 2 - 8, car.height / 2 - 16, 6, 12);
+
+            // Фары
+            ctx.fillStyle = '#ecf0f1';
+            ctx.fillRect(-car.width / 2 + 8, -car.height / 2 - 2, 8, 3);
+            ctx.fillRect(car.width / 2 - 16, -car.height / 2 - 2, 8, 3);
+
+            // Логотип Toyota
+            ctx.fillStyle = '#c0392b';
+            ctx.beginPath();
+            ctx.arc(0, -car.height / 2 + 15, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawStar(x, y, radius, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(Date.now() / 500);
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = '#f39c12';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        function updateUI() {
+            document.getElementById('levelDisplay').textContent = game.level;
+            document.getElementById('scoreDisplay').textContent = game.score;
+            
+            const collected = game.stars.filter(s => s.collected).length;
+            document.getElementById('starsCollected').textContent = collected;
+            document.getElementById('starsTotal').textContent = game.stars.length;
+            
+            const speed = Math.abs(car.speed * 20).toFixed(0);
+            document.getElementById('speedDisplay').textContent = speed + ' км/ч';
+            
+            const healthFill = document.getElementById('healthFill');
+            healthFill.style.width = game.health + '%';
+            healthFill.textContent = Math.round(game.health) + '%';
+            
+            if (game.health < 30) {
+                healthFill.classList.add('low');
+                healthFill.classList.remove('medium');
+            } else if (game.health < 60) {
+                healthFill.classList.add('medium');
+                healthFill.classList.remove('low');
+            } else {
+                healthFill.classList.remove('low', 'medium');
+            }
+
+            if (game.health <= 0) {
+                alert('Машина слишком повреждена! Начинаем уровень заново.');
+                game.health = 100;
+                generateLevel();
+            }
+        }
+
+        function updateSteeringWheel() {
+            const wheel = document.getElementById('steeringWheel');
+            const leftWheel = document.getElementById('leftWheel');
+            const rightWheel = document.getElementById('rightWheel');
+            const angleDisplay = document.getElementById('angleDisplay');
+            
+            const rotation = car.steeringAngle;
+            wheel.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+            
+            const wheelTurn = (car.steeringAngle / car.maxSteeringAngle) * 30;
+            leftWheel.style.transform = `rotate(${wheelTurn}deg)`;
+            rightWheel.style.transform = `rotate(${wheelTurn}deg)`;
+            
+            angleDisplay.textContent = Math.round(car.steeringAngle) + '°';
+        }
+
+        // Игровой цикл
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Запуск игры
+        generateLevel();
+        gameLoop();
+    </script>
+</body>
+</html>
